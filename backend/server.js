@@ -61,6 +61,34 @@ app.get("/", (req, res) => {
   res.status(200).send("Welcome to the Shipment & Packing Backend API!");
 });
 
+// ! EXAMPLE: GRAB ALL ROWS FROM SHIPPING RATES
+app.get("/api/shipping-rates", async (req, res) => {
+  try {
+    const [shippingRates] = await pool.query("SELECT * FROM shipping_rates");
+    res.json(shippingRates);
+  } catch (error) {
+    console.error("Error fetching shipping rates:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ! EXAMPLE: GRAB ALL ROWS FROM SHIPPING RATES
+app.get("/api/first-cost-by-route", async (req, res) => {
+  // extract "route" from API endpoint query
+  const { route } = req.query;
+
+  try {
+    const [rows] = await pool.query(
+      `SELECT first_cost, extra_cost FROM shipping_rates WHERE route="${route}"`
+    );
+
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching shipping rates:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // --- Locations Routes ---
 app.get("/api/locations", async (req, res) => {
   try {
@@ -72,16 +100,6 @@ app.get("/api/locations", async (req, res) => {
       .status(500)
       .json({ message: "Error retrieving locations", error: error.message });
   }
-});
-
-app.get('/api/shipping-rates', verifyToken, async (req, res) => {
-    try {
-        const [shippingRates] = await pool.query('SELECT DISTINCT rma_num FROM shipping_rates');
-        res.json(shippingRates);
-    } catch (error) {
-        console.error('Error fetching shipping rates:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
 });
 
 // --- User Authentication Routes (Login/Signup) ---
