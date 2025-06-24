@@ -74,6 +74,16 @@ app.get("/api/locations", async (req, res) => {
   }
 });
 
+app.get('/api/shipping-rates', verifyToken, async (req, res) => {
+    try {
+        const [shippingRates] = await pool.query('SELECT DISTINCT rma_num FROM shipping_rates');
+        res.json(shippingRates);
+    } catch (error) {
+        console.error('Error fetching shipping rates:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // --- User Authentication Routes (Login/Signup) ---
 app.post("/api/signup", async (req, res) => {
   const { username, email, password } = req.body;
