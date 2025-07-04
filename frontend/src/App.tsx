@@ -1,47 +1,65 @@
-import { useEffect, useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
+// src/App.tsx
 
-function App() {
-  const [count, setCount] = useState(0);
-  const [data, setData] = useState({});
+import React, { useEffect, useState } from 'react';
 
-  useEffect(() => {
-    fetch('/api/first-cost-by-route')
-      .then((res) => res.text())
-      .then((text) => {
-        console.log('Raw response:', text);
-        })
-      .catch((err) => console.error('Error:', err));
-  }, []);
-
-  return (
-    <>
-      <div className="flex flex-row gap-6 justify-center pb-4">
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <div className="pb-4">
-        <h1>Vite + React</h1>
-      </div>
-      <div>
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  );
+interface Value {
+    ID: number; // Adjust the type based on your actual table structure
+    cell_value: number; // Adjust the type based on your actual table structure
 }
+
+const App: React.FC = () => {
+    const [values, setValues] = useState<Value[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchValues = async () => {
+            try {
+                const response = await fetch('http://localhost:3000/api/get_values');
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data: Value[] = await response.json();
+                setValues(data);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'An unknown error occurred');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchValues();
+    }, []);
+
+    if (loading) {
+        return <div>Loading...</div>;
+    }
+
+    if (error) {
+        return <div>Error: {error}</div>;
+    }
+
+    return (
+        <div>
+            <h1>Values from Database</h1>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cell Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {values.map(value => (
+                        <tr key={value.ID}>
+                            <td>{value.ID}</td>
+                            <td>{value.cell_value}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 export default App;
