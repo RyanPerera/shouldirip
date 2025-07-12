@@ -40,27 +40,32 @@ app.get('/api/get_values', async (req, res) => {
 });
 
 // Read all entries
-app.get('/api/get_shipping_rates', async (req, res) => {
+app.get('/api/get_shipping_rate', async (req, res) => {
     console.log('Received request to /api/get_shipping_rates... ');
-    const { column } = req.query;
+  const { route, delivery_type } = req.query;
 
-    const allowedColumns = ['first_cost', 'second_cost', 'add more here'];
-    if (!allowedColumns.includes(column)) {
-        return res.status(400).json({ error: 'Invalid table name' });
+  if (!route || !delivery_type) {
+    return res.status(400).json({ error: 'Missing required parameters' });
+  }
+
+  try {
+    const query = `
+      SELECT first_cost, extra_cost 
+      FROM shipping_rates 
+      WHERE route = ? AND delivery_type = ?
+      LIMIT 1
+    `;
+    const [rows] = await db.query(query, [route, delivery_type]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No matching rate found' });
     }
 
-    if (!column) return res.status(400).json({ error: 'col is required' });
-    const query = `SELECT ${column} FROM shipping_rates`;
-    
-    try {
-        console.log('Executing query:', query);
-        const [results] = await db.query(query); // Use await to handle the promise
-        console.log('Query results:', results);
-        res.json(results);
-    } catch (err) {
-        console.error('Error executing query:', err.message);
-        return res.status(500).json({ error: err.message });
-    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error fetching shipping rate:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Start the server

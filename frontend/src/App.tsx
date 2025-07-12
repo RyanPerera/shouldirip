@@ -1,71 +1,78 @@
-// src/App.tsx
-
-import React, { useEffect, useState } from 'react';
-
-interface Value {
-    id: number; // Adjust the type based on your actual table structure
-    delivery_type: string; // Adjust the type based on your actual table structure
-    route: string; // Adjust the type based on your actual table structure
-    first_cost: number; // Adjust the type based on your actual table structure
-    extra_cost: number; // Adjust the type based on your actual table structure
-}
+import React, { useState } from 'react';
 
 const App: React.FC = () => {
-    const [values, setValues] = useState<Value[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<string | null>(null);
+  const [route, setRoute] = useState('HK to Canada');
+  const [deliveryType, setDeliveryType] = useState('Home Delivery');
+  const [weight, setWeight] = useState(1);
+  const [cost, setCost] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchValues = async () => {
-            try {
-                const response = await fetch('http://localhost:3000/api/get_shipping_rates?column=first_cost');
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data: Value[] = await response.json();
-                setValues(data);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'An unknown error occurred');
-            } finally {
-                setLoading(false);
-            }
-        };
+  const calculateShipping = async () => {
+    try {
+      const query = new URLSearchParams({
+        route,
+        delivery_type: deliveryType,
+      }).toString();
 
-        fetchValues();
-    }, []);
+      const response = await fetch(`http://localhost:3000/api/get_shipping_rate?${query}`);
+      if (!response.ok) throw new Error('Failed to fetch shipping rate');
 
-    if (loading) {
-        return <div>Loading...</div>;
+      const data = await response.json();
+      const first = Number(data.first_cost);
+      const extra = Number(data.extra_cost);
+
+      const totalCost = weight <= 1
+        ? first
+        : first + Math.ceil(weight - 1) * extra;
+
+      setCost(totalCost);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      setCost(null);
     }
+  };
 
-    if (error) {
-        return <div>Error: {error}</div>;
-    }
+  return (
+    <div>
+      <h1>Shipping Calculator</h1>
 
-    return (
-        <div>
-            <h1>Values from Database</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Cell Value</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {values.map(value => (
-                        <tr key={value.id}>
-                            <td>{value.id}</td>
-                            <td>{value.delivery_type}</td>
-                            <td>{value.route}</td>
-                            <td>{value.first_cost}</td>
-                            <td>{value.extra_cost}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-        </div>
-    );
+      <label>
+        From:
+        <select value={route} onChange={e => setRoute(e.target.value)}>
+          <option>HK to Canada</option>
+          <option>Within HK</option>
+          <option>Canada to HK</option>
+          <option>Within Canada</option>
+        </select>
+      </label>
+
+      <label>
+        Delivery Method:
+        <select value={deliveryType} onChange={e => setDeliveryType(e.target.value)}>
+          <option value="Home Delivery">Home Delivery</option>
+          <option value="Pick Up Point">Pick Up Point</option>
+          {(route === 'Within HK' || route === 'Canada to HK') && <option value="Forward">Forward</option>}
+        </select>
+      </label>
+
+      <label>
+        Weight (kg):
+        <input
+          type="number"
+          min={0.1}
+          step={0.1}
+          value={weight}
+          onChange={e => setWeight(Number(e.target.value))}
+        />
+      </label>
+
+      <button onClick={calculateShipping}>Calculate Shipping</button>
+
+      {cost !== null && <h2>Shipping Cost: ${cost}</h2>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
+  );
 };
 
 export default App;
