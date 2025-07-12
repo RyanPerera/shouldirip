@@ -39,6 +39,30 @@ app.get('/api/get_values', async (req, res) => {
     }
 });
 
+// Read all entries
+app.get('/api/get_shipping_rates', async (req, res) => {
+    console.log('Received request to /api/get_shipping_rates... ');
+    const { column } = req.query;
+
+    const allowedColumns = ['first_cost', 'second_cost', 'add more here'];
+    if (!allowedColumns.includes(column)) {
+        return res.status(400).json({ error: 'Invalid table name' });
+    }
+
+    if (!column) return res.status(400).json({ error: 'col is required' });
+    const query = `SELECT ${column} FROM shipping_rates`;
+    
+    try {
+        console.log('Executing query:', query);
+        const [results] = await db.query(query); // Use await to handle the promise
+        console.log('Query results:', results);
+        res.json(results);
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
 // Start the server
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);

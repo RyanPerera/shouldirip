@@ -3,8 +3,11 @@
 import React, { useEffect, useState } from 'react';
 
 interface Value {
-    ID: number; // Adjust the type based on your actual table structure
-    cell_value: number; // Adjust the type based on your actual table structure
+    id: number; // Adjust the type based on your actual table structure
+    delivery_type: string; // Adjust the type based on your actual table structure
+    route: string; // Adjust the type based on your actual table structure
+    first_cost: number; // Adjust the type based on your actual table structure
+    extra_cost: number; // Adjust the type based on your actual table structure
 }
 
 const App: React.FC = () => {
@@ -15,7 +18,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const fetchValues = async () => {
             try {
-                const response = await fetch('http://localhost:3000/api/get_values');
+                const response = await fetch('http://localhost:3000/api/get_shipping_rates?column=first_cost');
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
@@ -51,9 +54,12 @@ const App: React.FC = () => {
                 </thead>
                 <tbody>
                     {values.map(value => (
-                        <tr key={value.ID}>
-                            <td>{value.ID}</td>
-                            <td>{value.cell_value}</td>
+                        <tr key={value.id}>
+                            <td>{value.id}</td>
+                            <td>{value.delivery_type}</td>
+                            <td>{value.route}</td>
+                            <td>{value.first_cost}</td>
+                            <td>{value.extra_cost}</td>
                         </tr>
                     ))}
                 </tbody>
