@@ -49,60 +49,66 @@ const App: React.FC = () => {
       setCost(null);
     }
   };
-
   return (
-    <div>
-      <h1>Shipping Calculator</h1>
+    <div style={{ padding: '1rem', maxWidth: '600px', margin: '0 auto', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#f9f9f9', color: 'black' }}>
+      <h1 style={{ textAlign: 'center', color: '#333' }}>Shipping Calculator</h1>
 
-      <label>
+      <label style={{ display: 'block', marginBottom: '1rem' }}>
         From:
-        <select value={route} onChange={e => setRoute(e.target.value)}>
+        <select value={route} onChange={e => setRoute(e.target.value)} style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}>
           <option>HK to Canada</option>
           <option>Canada to HK</option>
         </select>
       </label>
 
-      <label>
+      <label style={{ display: 'block', marginBottom: '1rem' }}>
         Delivery Method:
-        <select value={deliveryType} onChange={e => setDeliveryType(e.target.value)}>
+        <select value={deliveryType} onChange={e => setDeliveryType(e.target.value)} style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}>
           <option value="Home Delivery">Home Delivery</option>
           <option value="Pick Up Point">Pick Up Point</option>
-          {(route === 'Canada to HK') && <option value="Forward">Forward</option>}
+          {route === 'Canada to HK' && <option value="Forward">Forward</option>}
         </select>
       </label>
 
-       <h3>Package Weights ({showPounds ? 'lbs' : 'kg'})</h3>
+      <h3 style={{ color: '#333' }}>Package Weights ({showPounds ? 'lbs' : 'kg'})</h3>
       {weights.map((w, i) => {
         const displayWeight = w.toFixed(2);
 
         return (
-          <div key={i} style={{ marginBottom: '0.5rem' }}>
-            <label>
-              Package {i + 1}:
+          <div key={i} style={{ marginBottom: '1rem', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '5px', backgroundColor: '#fff' }}>
+            <label style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ marginRight: '0.5rem' }}>Package {i + 1}:</span>
               <input
                 type="number"
                 min={0.1}
                 step={0.1}
                 value={displayWeight}
                 onChange={e => handleWeightChange(i, parseFloat(e.target.value))}
-                style={{ marginLeft: '0.5rem' }}
+                style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc', width: '60px' }}
               />
               <span style={{ marginLeft: '0.25rem' }}>{showPounds ? 'lbs' : 'kg'}</span>
             </label>
             {weights.length > 1 && (
-              <button onClick={() => removePackage(i)} style={{ marginLeft: '1rem' }}>Remove</button>
+              <button onClick={() => removePackage(i)} style={{ marginLeft: '1rem', backgroundColor: '#ff4d4d', color: '#333', border: 'none', borderRadius: '4px', padding: '0.25rem 0.5rem', cursor: 'pointer' }}>
+                Remove
+              </button>
             )}
           </div>
         );
       })}
 
-      <button onClick={addPackage}>Add Package</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
+        <button onClick={addPackage} style={{ backgroundColor: '#4CAF50', color: '#333', border: 'none', borderRadius: '4px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
+          Add Package
+        </button>
 
+        <button onClick={calculateShipping} style={{ backgroundColor: '#2196F3', color: '#333', border: 'none', borderRadius: '4px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
+          Calculate Shipping
+        </button>
+      </div>
 
-      <button onClick={calculateShipping}>Calculate Shipping</button>
-
-      {cost !== null && <h2>Shipping Cost: ${cost}</h2>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {cost !== null && <h2 style={{ textAlign: 'center', color: '#333' }}>Shipping Cost: ${cost}</h2>}
+      {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
     </div>
   );
 };
