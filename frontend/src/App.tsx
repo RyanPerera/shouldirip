@@ -3,9 +3,25 @@ import React, { useState } from 'react';
 const App: React.FC = () => {
   const [route, setRoute] = useState('HK to Canada');
   const [deliveryType, setDeliveryType] = useState('Home Delivery');
-  const [weight, setWeight] = useState(1);
+  const [weights, setWeights] = useState<number[]>([1]); // start with 1 package
+
   const [cost, setCost] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const showPounds = route === 'Canada to HK';
+
+  const handleWeightChange = (index: number, value: number) => {
+    const newWeights = [...weights];
+    newWeights[index] = value;
+    setWeights(newWeights);
+  };
+
+  const addPackage = () => {
+    setWeights([...weights, 1]); // Default new package weight: 1kg
+  };
+
+  const removePackage = (index: number) => {
+    setWeights(weights.filter((_, i) => i !== index));
+  };
 
   const calculateShipping = async () => {
     try {
@@ -21,9 +37,10 @@ const App: React.FC = () => {
       const first = Number(data.first_cost);
       const extra = Number(data.extra_cost);
 
-      const totalCost = weight <= 1
-        ? first
-        : first + Math.ceil(weight - 1) * extra;
+      const totalCost = weights.reduce((sum, w) => {
+        const pkgCost = w <= 1 ? first : first + Math.ceil(w - 1) * extra;
+        return sum + pkgCost;
+      }, 0);
 
       setCost(totalCost);
       setError(null);
@@ -41,9 +58,7 @@ const App: React.FC = () => {
         From:
         <select value={route} onChange={e => setRoute(e.target.value)}>
           <option>HK to Canada</option>
-          <option>Within HK</option>
           <option>Canada to HK</option>
-          <option>Within Canada</option>
         </select>
       </label>
 
@@ -52,20 +67,37 @@ const App: React.FC = () => {
         <select value={deliveryType} onChange={e => setDeliveryType(e.target.value)}>
           <option value="Home Delivery">Home Delivery</option>
           <option value="Pick Up Point">Pick Up Point</option>
-          {(route === 'Within HK' || route === 'Canada to HK') && <option value="Forward">Forward</option>}
+          {(route === 'Canada to HK') && <option value="Forward">Forward</option>}
         </select>
       </label>
 
-      <label>
-        Weight (kg):
-        <input
-          type="number"
-          min={0.1}
-          step={0.1}
-          value={weight}
-          onChange={e => setWeight(Number(e.target.value))}
-        />
-      </label>
+       <h3>Package Weights ({showPounds ? 'lbs' : 'kg'})</h3>
+      {weights.map((w, i) => {
+        const displayWeight = w.toFixed(2);
+
+        return (
+          <div key={i} style={{ marginBottom: '0.5rem' }}>
+            <label>
+              Package {i + 1}:
+              <input
+                type="number"
+                min={0.1}
+                step={0.1}
+                value={displayWeight}
+                onChange={e => handleWeightChange(i, parseFloat(e.target.value))}
+                style={{ marginLeft: '0.5rem' }}
+              />
+              <span style={{ marginLeft: '0.25rem' }}>{showPounds ? 'lbs' : 'kg'}</span>
+            </label>
+            {weights.length > 1 && (
+              <button onClick={() => removePackage(i)} style={{ marginLeft: '1rem' }}>Remove</button>
+            )}
+          </div>
+        );
+      })}
+
+      <button onClick={addPackage}>Add Package</button>
+
 
       <button onClick={calculateShipping}>Calculate Shipping</button>
 
