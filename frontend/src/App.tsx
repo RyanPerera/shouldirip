@@ -71,10 +71,8 @@ const App: React.FC = () => {
       </label>
 
       <h3 style={{ color: '#333' }}>Package Weights ({showPounds ? 'lbs' : 'kg'})</h3>
-      {weights.map((w, i) => {
-        const displayWeight = w.toFixed(2);
+      {weights.map((w, i) => (
 
-        return (
           <div key={i} style={{ marginBottom: '1rem', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '5px', backgroundColor: '#fff' }}>
             <label style={{ display: 'flex', alignItems: 'center' }}>
               <span style={{ marginRight: '0.5rem' }}>Package {i + 1}:</span>
@@ -82,7 +80,7 @@ const App: React.FC = () => {
                 type="number"
                 min={0.1}
                 step={0.1}
-                value={displayWeight}
+                value={w.toFixed(2)}
                 onChange={e => handleWeightChange(i, parseFloat(e.target.value))}
                 style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc', width: '60px' }}
               />
@@ -94,8 +92,7 @@ const App: React.FC = () => {
               </button>
             )}
           </div>
-        );
-      })}
+      ))}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
         <button onClick={addPackage} style={{ backgroundColor: '#4CAF50', color: '#333', border: 'none', borderRadius: '4px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
