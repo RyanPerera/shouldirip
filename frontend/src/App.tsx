@@ -1,4 +1,10 @@
 import React, { useState } from 'react';
+import { Card } from './components/ui/card';
+import { Button } from './components/ui/button';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
+import { Input } from './components/ui/input';
+import { Label } from './components/ui/label';
+import { H1, H2 } from './components/ui/typography';
 
 const App: React.FC = () => {
   const [route, setRoute] = useState('HK to Canada');
@@ -50,33 +56,45 @@ const App: React.FC = () => {
     }
   };
   return (
-    <div style={{ padding: '1rem', maxWidth: '600px', margin: '0 auto', border: '1px solid #ccc', borderRadius: '8px', backgroundColor: '#f9f9f9', color: 'black' }}>
-      <h1 style={{ textAlign: 'center', color: '#333' }}>Shipping Calculator</h1>
+    <div className='justify-center flex'>
 
-      <label style={{ display: 'block', marginBottom: '1rem' }}>
-        From:
-        <select value={route} onChange={e => setRoute(e.target.value)} style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}>
-          <option>HK to Canada</option>
-          <option>Canada to HK</option>
-        </select>
-      </label>
+      <Card className='max-w-3xl p-12'>
+        <H1 color='black'>Shipping Calculator</H1>
 
-      <label style={{ display: 'block', marginBottom: '1rem' }}>
-        Delivery Method:
-        <select value={deliveryType} onChange={e => setDeliveryType(e.target.value)} style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc' }}>
-          <option value="Home Delivery">Home Delivery</option>
-          <option value="Pick Up Point">Pick Up Point</option>
-          {route === 'Canada to HK' && <option value="Forward">Forward</option>}
-        </select>
-      </label>
+        <Label>From:</Label>
+        <Select >
+          <SelectTrigger className='w-full'>
+            <SelectValue placeholder="Select Route" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="HK to Canada">HK to Canada</SelectItem>
+              <SelectItem value="Canada to HK">Canada to HK</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
 
-      <h3 style={{ color: '#333' }}>Package Weights ({showPounds ? 'lbs' : 'kg'})</h3>
-      {weights.map((w, i) => (
+        <Label>Delivery Method:</Label>
+        <Select >
+          <SelectTrigger className='w-full'>
+            <SelectValue placeholder="Select a delivery method" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="Home Delivery">Home Delivery</SelectItem>
+              <SelectItem value="Pick Up Point">Pick Up Point</SelectItem>
+              {route === 'Canada to HK' && <SelectItem value="Forward">Forward</SelectItem>}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
 
-          <div key={i} style={{ marginBottom: '1rem', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '5px', backgroundColor: '#fff' }}>
-            <label style={{ display: 'flex', alignItems: 'center' }}>
-              <span style={{ marginRight: '0.5rem' }}>Package {i + 1}:</span>
-              <input
+        <Label>Package Weights ({showPounds ? 'lbs' : 'kg'})</Label>
+        {weights.map((w, i) => (
+
+          <div key={i} className='gap-2 flex flex-col'>
+            <Label>Package {i + 1}:</Label>
+            <div className='flex flex-row gap-1'>
+              <Input
                 type="number"
                 min={0.1}
                 step={0.1}
@@ -84,28 +102,29 @@ const App: React.FC = () => {
                 onChange={e => handleWeightChange(i, parseFloat(e.target.value))}
                 style={{ marginLeft: '0.5rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid #ccc', width: '60px' }}
               />
-              <span style={{ marginLeft: '0.25rem' }}>{showPounds ? 'lbs' : 'kg'}</span>
-            </label>
-            {weights.length > 1 && (
-              <button onClick={() => removePackage(i)} style={{ marginLeft: '1rem', backgroundColor: '#ff4d4d', color: '#333', border: 'none', borderRadius: '4px', padding: '0.25rem 0.5rem', cursor: 'pointer' }}>
-                Remove
-              </button>
-            )}
+              <Label style={{ marginLeft: '0.25rem' }}>{showPounds ? 'lbs' : 'kg'}</Label>
+              {weights.length > 1 && (
+                <Button onClick={() => removePackage(i)} className='ml-auto'>
+                  Remove
+                </Button>
+              )}
+            </div>
+
           </div>
-      ))}
+        ))}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1rem' }}>
-        <button onClick={addPackage} style={{ backgroundColor: '#4CAF50', color: '#333', border: 'none', borderRadius: '4px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
-          Add Package
-        </button>
+        <div className='justify-between flex'>
+          <Button onClick={addPackage}>
+            Add Package
+          </Button>
+          <Button onClick={calculateShipping} >
+            Calculate Shipping
+          </Button>
+        </div>
 
-        <button onClick={calculateShipping} style={{ backgroundColor: '#2196F3', color: '#333', border: 'none', borderRadius: '4px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
-          Calculate Shipping
-        </button>
-      </div>
-
-      {cost !== null && <h2 style={{ textAlign: 'center', color: '#333' }}>Shipping Cost: ${cost}</h2>}
-      {error && <p style={{ color: 'red', textAlign: 'center' }}>{error}</p>}
+        {cost !== null && <H2>Shipping Cost: ${cost}</H2>}
+        {error && <p >{error}</p>}
+      </Card>
     </div>
   );
 };
