@@ -1,36 +1,19 @@
-// server.js
-
 // Load Environment Variables
 require("dotenv").config();
 
-// Import Necessary Modules
-const express = require("express");
-const mysql = require("mysql2/promise");
-const cors = require("cors");
+const express = require('express');
+const mysql = require('mysql2/promise'); // Use mysql2 for promise support
+const cors = require('cors');
 
-// Initialize Express App
 const app = express();
-const port = process.env.PORT || 3000; // Use port from .env or default to 3000
+const port = process.env.PORT || 3000; // or any port you prefer
 
-// Middleware Setup
-// Enable CORS
-// TODO: Modify for PROD
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // React dev server
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-app.use(cors(corsOptions));
+// Middleware
+app.use(cors()); // Allow cross-origin requests
+app.use(express.json()); // Parse JSON bodies
 
-// Enable JSON body parsing
-app.use(express.json());
-
-// Enable URL-encoded body parsing (for form data)
-app.use(express.urlencoded({ extended: true }));
-
-// Database Connection Pool
-const pool = mysql.createPool({
+// MySQL connection pool
+const db = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
@@ -40,80 +23,52 @@ const pool = mysql.createPool({
   queueLimit: 0,
 });
 
-// Test the database connection
-(async () => {
-  try {
-    const connection = await pool.getConnection();
-    console.log(
-      "Successfully connected to MySQL database! Connection ID:",
-      connection.threadId
-    );
-    connection.release();
-  } catch (error) {
-    console.error("Failed to connect to the database:", error.message);
+// Read all entries
+app.get('/api/get_values', async (req, res) => {
+    console.log('Received request to /api/get_values');
+    const query = 'SELECT * FROM test';
+    
+    try {
+        console.log('Executing query:', query);
+        const [results] = await db.query(query); // Use await to handle the promise
+        console.log('Query results:', results);
+        res.json(results);
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// Read all entries
+app.get('/api/get_shipping_rate', async (req, res) => {
+    console.log('Received request to /api/get_shipping_rates... ');
+  const { route, delivery_type } = req.query;
+
+  if (!route || !delivery_type) {
+    return res.status(400).json({ error: 'Missing required parameters' });
   }
-})();
 
-// *API Routes
-
-// --- Basic Test Route ---
-app.get("/", (req, res) => {
-  res.status(200).send("Welcome to the Shipment & Packing Backend API!");
-});
-
-// --- Locations Routes ---
-app.get("/api/locations", async (req, res) => {
   try {
-    const [rows] = await pool.query("SELECT * FROM locations");
-    res.status(200).json(rows);
-  } catch (error) {
-    console.error("Error fetching locations:", error);
-    res
-      .status(500)
-      .json({ message: "Error retrieving locations", error: error.message });
+    const query = `
+      SELECT first_cost, extra_cost 
+      FROM shipping_rates 
+      WHERE route = ? AND delivery_type = ?
+      LIMIT 1
+    `;
+    const [rows] = await db.query(query, [route, delivery_type]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No matching rate found' });
+    }
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Error fetching shipping rate:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
-// --- User Authentication Routes (Login/Signup) ---
-app.post("/api/signup", async (req, res) => {
-  const { username, email, password } = req.body;
-  // TODO: Implement user registration logic:
-  // 1. Validate input
-  // 2. Hash password (e.g., using bcrypt)
-  // 3. Save user to database
-  // 4. Respond with success or error
-  res.status(501).json({ message: "Signup endpoint not yet implemented." });
-});
-
-// Placeholder for user login
-app.post("/api/login", async (req, res) => {
-  const { email, password } = req.body;
-  // TODO: Implement user login logic:
-  // 1. Find user by email
-  // 2. Compare hashed password
-  // 3. Generate and return a token (e.g., JWT) or set a session
-  res.status(501).json({ message: "Login endpoint not yet implemented." });
-});
-
-// --- Other future routes (Pick Up, Admin, etc.) ---
-// app.get('/api/lockers', async (req, res) => { ... });
-// app.put('/api/users/:id', async (req, res) => { ... });
-
-// Error Handling Middleware
-// This should be the last `app.use()` call, before `app.listen`.
-app.use((err, req, res, next) => {
-  console.error("An unhandled error occurred:", err.stack);
-  res.status(500).json({
-    message: "Something went wrong on the server.",
-    error:
-      process.env.NODE_ENV === "development"
-        ? err.message
-        : "Internal Server Error",
-  });
-});
-
-// 8. Start the Server
+// Start the server
 app.listen(port, () => {
-  console.log(`🚀 Server running on http://localhost:${port}`);
-  console.log("Environment:", process.env.NODE_ENV || "development");
+    console.log(`Server is running on http://localhost:${port}`);
 });
