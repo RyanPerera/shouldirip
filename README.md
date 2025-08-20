@@ -1,50 +1,54 @@
-Frontend: React (TypeScript), Vite, Tailwind CSS
-Backend: Node.js, Express.js
-Database: MySQL
+# React + TypeScript + Vite
 
-# Quick Start
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-1. Clone the repository:
+Currently, two official plugins are available:
 
-```bash
-git clone https://github.com/EdTechCanada/AmazingExpress.git
-cd AnazingExpress
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-2. Database Setup:
-   TBD
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-3. Backend Setup (backend/ directory):
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-```bash
-cd backend
-npm install
-npm start
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
 ```
-
-4. Frontend Setup (frontend/ directory):
-
-```bash
-    cd frontend
-    npm install
-    npm run dev
-```
-
-5. VS Code Setup (optional)
-
-   Extensions: Install "ESLint", "Prettier", "Tailwind CSS IntelliSense", and "Material Icon Theme".
-   Settings: Set default formatter to Prettier.
-   Other recommended extensions:
-   Auto rename tag
-   Bearded theme
-   Better comments
-   DotENV
-   es7+ react snippets
-   Expo tools
-   Material icon theme
-   Path intellisense
-   Prettier
-   Pretty typescript errors
-   Remove unused imports
-   Tailwind css intellisense
-   Vscode-pdf
