@@ -6,7 +6,7 @@ import { defineConfig } from "vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "https://RyanPerera.github.io/shouldirip",
+  base: "https://RyanPerera.github.io/ShouldIRip",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
