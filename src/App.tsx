@@ -20,9 +20,6 @@ import {
 import { XIcon } from 'lucide-react';
 import { Button } from './components/ui/button';
 
-
-//TODO: Insert rarity data for new sets added
-
 const allowed_rarities = [
   'Common',
   'Uncommon',
@@ -75,13 +72,12 @@ function App() {
   const [totalPages, setTotalPages] = useState(0)
 
 
-
   // Fetch sets on mount
   useEffect(() => {
     async function getSets() {
       const { data: setsData, error } = await supabase
         .from('sets')
-        .select('id, name, pack_price');
+        .select('id, name, pack_price')
 
       if (error) {
         console.error('Error fetching sets:', error.message);
@@ -97,7 +93,6 @@ function App() {
   useEffect(() => {
     if (!selectedSetId) return;
     setCards([])
-    setSelectedCards(new Map())
 
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
@@ -142,6 +137,8 @@ function App() {
   // Fetch rarity distribution whenever a set is selected
   useEffect(() => {
     if (!selectedSetId) return;
+    setSelectedCards(new Map())
+    setPage(1)
 
     async function getRarities() {
       const { data: raritiesData, error } = await supabase
