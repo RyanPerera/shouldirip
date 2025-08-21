@@ -11,7 +11,7 @@ export function Navbar() {
         <NavigationMenu className="py-3 px-5 max-w-7xl flex mx-auto" viewport={false}>
             <div className="flex justify-between w-full">
                 <NavigationMenuItem className="flex">
-                    <NavigationMenuLink href="/">
+                    <NavigationMenuLink href="/shouldirip">
                         <H1>Should I Rip?</H1>
                     </NavigationMenuLink>
                 </NavigationMenuItem>

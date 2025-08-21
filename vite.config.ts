@@ -7,7 +7,7 @@ import { defineConfig } from "vite";
 //t
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  base: "/ShouldIRip",
+  base: "/shouldirip",
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
