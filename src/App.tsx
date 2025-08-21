@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardFooter } from './components/ui/card';
-import { Button } from './components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
-import { H1, H2, Large, Lead, Small } from './components/ui/typography';
+import { H1, H2, H3, Large, Small } from './components/ui/typography';
 import { supabase } from '../utils/supabase'
 import { Skeleton } from './components/ui/skeleton';
 import { Checkbox } from './components/ui/checkbox';
@@ -10,24 +9,39 @@ import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, Tabl
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Slider } from './components/ui/slider';
 import { displayPercent } from './lib/format';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from './components/ui/pagination';
+import { XIcon } from 'lucide-react';
+import { Button } from './components/ui/button';
 
-const PACK_PRICE = 5; // adjust if needed
 
 //TODO: Insert rarity data for new sets added
-//TODO: actually use new pack price data from sets
-//TODO: Add table pagination, make sure I'm pulling all cards from set in db
 
-const allowed_rarities = ['Poké Ball Foil',
+const allowed_rarities = [
+  'Common',
+  'Uncommon',
+  'Rare',
+  'Poké Ball Foil',
   'Double Rare',
   'Ultra Rare',
+  'Hyper Rare',
   'Illustration Rare',
   'Master Ball Foil',
+  'ACE SPEC Rare',
   'Special Illustration Rare',
-  'Black White Rare']
+  'Black White Rare'
+]
 
 type CardSet = {
   id: string;
   name: string;
+  pack_price: number;
 }
 
 type Card = {
@@ -50,9 +64,16 @@ function App() {
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
   const [rarities, setRarities] = useState<Rarity[]>([]);
-  const [selectedCards, setSelectedCards] = useState<Set<string>>(new Set());
+  const [selectedCards, setSelectedCards] = useState<Map<string, Card>>(new Map());
+
 
   const [packs, setPacks] = useState(10);
+  const [packPrice, setPackPrice] = useState(4.99);
+
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(20)
+  const [totalPages, setTotalPages] = useState(0)
+
 
 
   // Fetch sets on mount
@@ -60,7 +81,7 @@ function App() {
     async function getSets() {
       const { data: setsData, error } = await supabase
         .from('sets')
-        .select('id, name');
+        .select('id, name, pack_price');
 
       if (error) {
         console.error('Error fetching sets:', error.message);
@@ -75,24 +96,48 @@ function App() {
   // Fetch cards whenever a set is selected
   useEffect(() => {
     if (!selectedSetId) return;
+    setCards([])
+    setSelectedCards(new Map())
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const selectedSet = sets.find(s => s.id === selectedSetId);
+    if (selectedSet && selectedSet.pack_price) {
+      setPackPrice(selectedSet.pack_price);
+    }
 
     async function getCards() {
-      const { data: cardsData, error } = await supabase
+      const { data, error } = await supabase
         .from('cards')
         .select('id, name, rarity, market_price, image_url')
         .in('rarity', allowed_rarities)
         .eq('set_id', selectedSetId)
+        .range(from, to)
         .order('market_price', { ascending: false })
 
       if (error) {
         console.error('Error fetching cards:', error.message);
-      } else if (cardsData) {
-        setCards(cardsData);
       }
+
+      // Set total pages based on count
+      if (data) {
+        setCards(data);
+        const { count } = await supabase
+          .from("cards")
+          .select("*", { count: "exact", head: true }) // just count
+          .eq("set_id", selectedSetId)
+
+        if (count) {
+          setTotalPages(Math.ceil(count / pageSize))
+        }
+      }
+
     }
 
     getCards();
-  }, [selectedSetId]);
+  }, [selectedSetId, sets, page, pageSize]);
+
 
   // Fetch rarity distribution whenever a set is selected
   useEffect(() => {
@@ -117,17 +162,18 @@ function App() {
 
 
   // Toggle card when selected, add to set
-  const toggleCard = (cardId: string) => {
+  const toggleCard = (card: Card) => {
     setSelectedCards(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(cardId)) {
-        newSet.delete(cardId);
+      const newMap = new Map(prev);
+      if (newMap.has(card.id)) {
+        newMap.delete(card.id);
       } else {
-        newSet.add(cardId);
+        newMap.set(card.id, card);
       }
-      return newSet;
+      return newMap;
     });
   };
+
 
   // computed rarity probabilities for chosen pack count
   const rarityDistribution = useMemo(() => {
@@ -144,259 +190,382 @@ function App() {
 
   // computed stats for selected cards
   const selectedCardStats = useMemo(() => {
-    return cards
-      .filter(c => selectedCards.has(c.id))
-      .map(card => {
-        const rarityProb = rarities.find(r => r.rarity === card.rarity)?.probability || 0;
-        const prob = 1 - Math.pow(1 - Number(rarityProb), packs);
-        return {
-          ...card,
-          probability: prob * 100,
-          costPacks: packs * PACK_PRICE,
-        };
-      });
-  }, [packs, cards, rarities, selectedCards]);
+    return Array.from(selectedCards.values()).map(card => {
+      const rarityRow = rarities.find(r => r.rarity === card.rarity);
+      const rarityProb = rarityRow ? Number(rarityRow.probability) : 0; // convert string to number
+      const prob = 1 - Math.pow(1 - rarityProb, packs);
+      return {
+        ...card,
+        probability: prob * 100,
+        costPacks: packs * packPrice,
+      };
+    });
+  }, [packs, rarities, selectedCards, packPrice]);
+
 
   // totals for footer
+  // totals for footer
   const selectedTotals = useMemo(() => {
-    // default values
-    if (selectedCards.size === 0) return { probAll: 0, probAny: 0, totalMarket: 0 };
+    const selectedArray = Array.from(selectedCards.values()); // full card objects
+    if (selectedArray.length === 0) return { probAll: 0, probAny: 0, totalMarket: 0 };
 
-    const ids = [...selectedCards];
-
-    // collect per-card per-pack probabilities (as numbers)
-    const perCardP = ids
-      .map((cardId) => {
-        const card = cards.find((c) => c.id === cardId);
-        if (!card) return null;
-        const rarityRow = rarities.find((r) => r.rarity === card.rarity);
-        const p = rarityRow ? Number(rarityRow.probability) : 0;
-        return p;
+    // per-card probabilities
+    const perCardP = selectedArray
+      .map(card => {
+        const rarityRow = rarities.find(r => r.rarity === card.rarity);
+        return rarityRow ? Number(rarityRow.probability) : 0;
       })
-      .filter((p) => p !== null && !Number.isNaN(p))
-      .map(Number);
+      .filter(p => !Number.isNaN(p));
 
-    // If any card has zero per-pack probability, probAll will be zero (can't get that card)
     if (perCardP.length === 0) return { probAll: 0, probAny: 0, totalMarket: 0 };
 
-    // 1) Probability of getting at least one copy of each selected card
-    //    For each card: q_i = 1 - (1 - p_i)^packs is chance to get that card at least once in `packs`.
-    //    Approximate probAll by multiplying q_i (assumes independence).
+    // Probability of getting all selected cards
     const probAll = perCardP.reduce((acc, p) => acc * (1 - Math.pow(1 - p, packs)), 1);
 
-    // 2) Probability of getting at least one of ANY selected card
-    //    For a single pack, chance to miss all selected cards = product_i (1 - p_i)
-    //    Miss across all packs = (missPerPack)^packs -> probAny = 1 - missAll
+    // Probability of getting any selected card
     const missPerPack = perCardP.reduce((acc, p) => acc * (1 - p), 1);
     const probAny = 1 - Math.pow(missPerPack, packs);
 
-    // 3) Total market value (sum of market_price)
-    const totalMarket = ids.reduce((sum, cardId) => {
-      const card = cards.find((c) => c.id === cardId);
-      return card ? sum + Number(card.market_price) : sum;
-    }, 0);
+    // Total market value
+    const totalMarket = selectedArray.reduce((sum, card) => sum + Number(card.market_price), 0);
 
     return { probAll, probAny, totalMarket };
-  }, [packs, selectedCards, cards, rarities]);
+  }, [packs, selectedCards, rarities]);
 
 
+  // Helper to generate visible pages with ellipsis
+  function getVisiblePages(page: number, totalPages: number, maxPages = 5) {
+    const pages: (number | string)[] = [];
+
+    if (totalPages <= maxPages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+
+    // Always show first page
+    pages.push(1);
+
+    // Determine left/right window
+    const start = Math.max(page - 1, 2);
+    const end = Math.min(page + 1, totalPages - 1);
+
+    if (start > 2) pages.push('…');
+
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    if (end < totalPages - 1) pages.push('…');
+
+    // Always show last page
+    pages.push(totalPages);
+
+    return pages;
+  }
 
 
   return (
-    <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 justify-center'>
-      <Card className='col-span-1 p-8 order-2'>
-        <H1 color='black'>Select a set</H1>
+    <>
+      {!selectedSetId ? (
+        // Landing state when no set is selected
+        <div className="flex flex-col items-center justify-center text-center min-h-[70vh] px-4">
+          <H1 color="black" className="mb-4">Save Your Money</H1>
+          <p className="max-w-prose mb-6 text-lg text-gray-700">
+            Stop paying outrageous market prices for Pokémon TCG packs! This app can help you decide whether it’s actually worth it to buy booster packs, over just buying singles.
+            Choose a set below to see pull rates, select your chase cards, and see whether the odds are in your favour.
+          </p>
+          <Card className="p-8 max-w-md w-full">
+            <H3>Select a set to get started</H3>
+            <Select onValueChange={setSelectedSetId}>
+              <SelectTrigger className="w-full mt-4">
+                <SelectValue placeholder="Select Set" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {sets.map(({ name, id }) => (
+                    <SelectItem value={id} key={id}>{name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </Card>
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 justify-center'>
+          <Card className='col-span-1 p-8 order-2'>
+            <H1 color='black'>Select a set</H1>
 
-        {/* <Label>From:</Label> */}
-        <Select onValueChange={setSelectedSetId} >
-          <SelectTrigger className='w-full'>
-            <SelectValue placeholder="Select Set" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {sets.map(({ name, id }) => (
-                <SelectItem value={id} key={id}>{name}</SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+            {/* <Label>From:</Label> */}
+            <Select onValueChange={setSelectedSetId} value={selectedSetId}>
+              <SelectTrigger className='w-full'>
+                <SelectValue placeholder="Select Set" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {sets.map(({ name, id }) => (
+                    <SelectItem value={id} key={id}>{name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
 
-        {rarities.length > 0 &&
-          <Table>
+            {rarities.length > 0 &&
+              <Table>
 
-            <TableCaption>Note: These pull rates are not guaranteed and are based off of a moderate sample size.</TableCaption>
-            <TableHeader className='border-bg-zinc-600 border-b-2'>
-              <TableHead>Rarity</TableHead>
-              <TableHead>Pull Rate for Specific Card</TableHead>
-              <TableHead className='text-right'>Pull Rate for Any Card</TableHead>
-            </TableHeader>
-            <TableBody>
-              {rarities.map(({ rarity, probability, probability_any }) => (
-                <TableRow>
-                  <TableCell>{rarity}</TableCell>
-                  <TableCell className='text-right'>{displayPercent(probability)}</TableCell>
-                  <TableCell className='text-right'>{displayPercent(probability_any)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        }
+                <TableCaption>Note: These pull rates are not guaranteed and are based off of a moderate sample size.</TableCaption>
+                <TableHeader className='border-bg-zinc-600 border-b-2'>
+                  <TableHead>Rarity</TableHead>
+                  <TableHead className="text-right">Pull Rate for Specific Card</TableHead>
+                  <TableHead className='text-right'>Pull Rate for Any Card</TableHead>
+                </TableHeader>
+                <TableBody>
+                  {rarities.map(({ rarity, probability, probability_any }) => (
+                    <TableRow>
+                      <TableCell>{rarity}</TableCell>
+                      <TableCell className='text-right'>{displayPercent(probability)}</TableCell>
+                      <TableCell className='text-right'>{displayPercent(probability_any)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            }
 
-        {cards.length > 0 && (
-          <>
-            <H2 className='mt-6'>Cards in this set:</H2>
-            <div className='grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2'>
-              {cards.map((card) => (
-                <Card
-                  key={card.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => toggleCard(card.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      toggleCard(card.id);
-                    }
-                  }}
-                  className={`cursor-pointer flex flex-col items-center justify-end rounded-lg border p-2
+            {cards.length > 0 && (
+              <>
+                <div className='flex flex-row items-center justify-between border-b-1'>
+                  <H2 className='mt-6 border-b-0'>Cards in this set:</H2>
+                  {selectedCards.size > 0 && <Button className='w-fit h-fit' onClick={() => setSelectedCards(new Map())}>
+                    Clear<XIcon />
+                  </Button>}
+                </div>
+                <div className='grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2'>
+                  {cards.map((card) => (
+                    <Card
+                      key={card.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => toggleCard(card)}
+
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleCard(card);
+                        }
+                      }}
+                      className={`flex flex-col items-center justify-end rounded-lg border p-2
                     hover:bg-accent/20 transition-colors h-full w-full gap-0
                     ${selectedCards.has(card.id)
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'hover:border-accent-foreground/20'
-                    }`}
-                >
-                  <Checkbox
-                    checked={selectedCards.has(card.id)}
-                    onChange={() => { }}
-                    className="sr-only"
-                    tabIndex={-1}
-                  />
-                  <CardContent className="flex flex-grow px-1">
-                    {card.image_url && card.image_url !== "https://tcgplayer-cdn.tcgplayer.com/product/image-missing_in_200x200.jpg" ? (
-                      <img
-                        src={card.image_url}
-                        className="max-h-32 w-auto mb-2 object-contain"
-                        alt={card.name}
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'hover:border-accent-foreground/20'
+                        }`}
+                    >
+                      <Checkbox
+                        checked={selectedCards.has(card.id)}
+                        onChange={() => toggleCard(card)}
+                        className="sr-only"
+                        tabIndex={-1}
                       />
+                      <CardContent className="flex flex-grow px-1">
+                        {card.image_url && card.image_url !== "https://tcgplayer-cdn.tcgplayer.com/product/image-missing_in_200x200.jpg" ? (
+                          <img
+                            src={card.image_url}
+                            className="max-h-32 w-auto mb-2 object-contain"
+                            alt={card.name}
+                          />
+                        ) : (
+                          <Skeleton className="min-h-26 min-w-20 rounded-md mb-2" />
+                        )}
+                      </CardContent>
+
+                      <CardFooter className='flex flex-col p-0 mb-auto flex-grow'>
+                        <Large className="text-center text-xs">{card.name}</Large>
+                        <Small className="text-center text-xs">{card.rarity}</Small>
+                        <Small className="text-center text-xs">${card.market_price}</Small>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+            {/* Pagination */}
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+
+                    className={`${page <= 1 ? 'pointer-events-none opacity-50' : ''}`}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (page > 1) setPage(page - 1)
+                    }}
+                  />
+                </PaginationItem>
+
+                {/* Page number buttons */}
+                {getVisiblePages(page, totalPages).map((p, idx) => (
+                  <PaginationItem key={idx}>
+                    {typeof p === 'number' ? (
+                      <PaginationLink
+                        onClick={() => setPage(p)}
+                        isActive={p === page}
+                      >
+                        {p}
+                      </PaginationLink>
                     ) : (
-                      <Skeleton className="min-h-26 min-w-20 rounded-md mb-2" />
+                      <span className="px-2 py-1 cursor-default select-none">…</span>
                     )}
-                  </CardContent>
-
-                  <CardFooter className='flex flex-col p-0 mb-auto flex-grow'>
-                    <Large className="text-center text-xs">{card.name}</Large>
-                    <Small className="text-center text-xs">{card.rarity}</Small>
-                    <Small className="text-center text-xs">${card.market_price}</Small>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className='justify-end flex'>
-          <Button>
-            Test
-          </Button>
-        </div>
-      </Card>
-
-      {selectedSetId && <Card className='col-span-1 p-8 h-fit'>
-
-        {/* Packs slider */}
-        <div className="my-6">
-          <p>Packs to open: {packs}</p>
-          <Slider
-            defaultValue={[packs]}
-            max={100}
-            step={1}
-            onValueChange={val => setPacks(val[0])}
-          />
-        </div>
-
-        {/* Chart for rarities */}
-        {rarityDistribution.length > 0 && (
-          <>
-            <H2>Rarity Probability Distribution</H2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={rarityDistribution}>
-                <XAxis dataKey="rarity" />
-                <YAxis />
-                <Tooltip
-                  formatter={(value: number, name: string) => {
-                    const labelMap: Record<string, string> = {
-                      probability: "Probability",
-                      probability_any: "Probability Any",
-                    };
-                    return [displayPercent(value / 100), labelMap[name] || name];
-                  }}
-                />
-                <Bar dataKey="probability" fill="#82c6fa" />
-                <Bar dataKey="probability_any" fill="#3dabff" />
-              </BarChart>
-            </ResponsiveContainer>
-          </>
-        )}
-
-        {/* Table for selected cards */}
-        {selectedCardStats.length > 0 && (
-          <>
-            <H2>Selected Cards Odds</H2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Card</TableHead>
-                  <TableHead>Rarity</TableHead>
-                  <TableHead colSpan={2} className="text-right">Chance</TableHead>
-                  <TableHead className="text-right">Market Price</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedCardStats.map(card => (
-                  <TableRow key={card.id}>
-                    <TableCell>{card.name}</TableCell>
-                    <TableCell>{card.rarity}</TableCell>
-                    <TableCell colSpan={2} className="text-right">{card.probability.toFixed(2)}%</TableCell>
-                    <TableCell className="text-right">${card.market_price}</TableCell>
-                  </TableRow>
+                  </PaginationItem>
                 ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell>
-                    <strong>Total</strong>
-                  </TableCell>
-                  <TableCell>
-                    <strong>Total pack price: </strong>
-                    <span>${packs * PACK_PRICE}</span>
-                  </TableCell>
-                  {/* Probability column: show both "All" and "Any" */}
-                  <TableCell colSpan={2} className="text-right">
-                    <div className="flex flex-col gap-1">
-                      <div>
-                        <strong>Pulling every card: </strong>
-                        <span>{displayPercent(selectedTotals.probAll)}</span>
-                      </div>
-                      <div>
-                        <strong>Pulling any of the selected: </strong>
-                        <span>{displayPercent(selectedTotals.probAny)}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  {/* total market value */}
-                  <TableCell className="text-right">
-                    <strong>Total market price: </strong>
-                    <span>${selectedTotals.totalMarket.toFixed(2)}</span>
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
 
-            </Table>
-          </>
-        )}
 
-      </Card>}
-    </div >
+                <PaginationItem>
+                  <PaginationNext
+                    className={`${page >= totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      if (page < totalPages) setPage(page + 1)
+                    }}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </Card>
+
+          {selectedSetId && <Card className='col-span-1 p-8 h-fit'>
+
+            {/* Packs and Pack Price */}
+            <div className="my-3 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+              {/* Packs */}
+              <div className="flex flex-col flex-grow">
+                <label className="mb-1 font-medium">Packs to open:</label>
+                <div className="flex items-center gap-2">
+                  <Slider
+                    value={[packs]}
+                    min={0}
+                    max={2000}
+                    step={1}
+                    onValueChange={val => setPacks(val[0])}
+                    className="flex-1"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={2000}
+                    value={packs}
+                    onChange={(e) => setPacks(Number(e.target.value))}
+                    className="w-20 p-1 border rounded"
+                  />
+                </div>
+              </div>
+
+              {/* Pack Price */}
+              <div className="flex flex-col mt-4 sm:mt-0">
+                <label className="mb-1 font-medium">Price per pack ($):</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={packPrice}
+                  onChange={(e) => setPackPrice(Number(e.target.value))}
+                  className="w-32 p-1 border rounded"
+                />
+              </div>
+            </div>
+
+            {/* Display total cost */}
+            <p className="mt-2 font-semibold">
+              Total cost: ${(packs * packPrice).toFixed(2)}
+            </p>
+
+
+            {/* Chart for rarities */}
+            {rarityDistribution.length > 0 && (
+              <>
+                <H2>Rarity Probability Distribution</H2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={rarityDistribution}>
+                    <XAxis dataKey="rarity" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value: number, name: string) => {
+                        const labelMap: Record<string, string> = {
+                          probability: "Probability",
+                          probability_any: "Probability Any",
+                        };
+                        return [displayPercent(value / 100), labelMap[name] || name];
+                      }}
+                    />
+                    <Bar dataKey="probability" fill="#82c6fa" />
+                    <Bar dataKey="probability_any" fill="#3dabff" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </>
+            )}
+
+            {/* Table for selected cards */}
+            {selectedCardStats.length > 0 && (
+              <>
+                <H2>Selected Cards Odds</H2>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Card</TableHead>
+                      <TableHead>Rarity</TableHead>
+                      <TableHead colSpan={2} className="text-right">Pull Rate</TableHead>
+                      <TableHead className="text-right">Market Price</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedCardStats.map(card => (
+                      <TableRow key={card.id}>
+                        <TableCell>{card.name}</TableCell>
+                        <TableCell>{card.rarity}</TableCell>
+                        <TableCell colSpan={2} className="text-right">{card.probability.toFixed(2)}%</TableCell>
+                        <TableCell className="text-right">${(card.market_price).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>
+                        <strong>Total</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Total cost: </strong>
+                        <span>${(packs * packPrice).toFixed(2)}</span>
+                      </TableCell>
+                      {/* Probability column: show both "All" and "Any" */}
+                      <TableCell colSpan={2} className="text-right">
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            <strong>Pulling every card: </strong>
+                            <span>{displayPercent(selectedTotals.probAll)}</span>
+                          </div>
+                          <div>
+                            <strong>Pulling any of the selected: </strong>
+                            <span>{displayPercent(selectedTotals.probAny)}</span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      {/* total market value */}
+                      <TableCell className="text-right">
+                        <strong>Total market price: </strong>
+                        <span>${selectedTotals.totalMarket.toFixed(2)}</span>
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+
+                </Table>
+              </>
+            )}
+
+
+          </Card>}
+        </div >
+      )
+      }
+    </>
   );
 }
 
