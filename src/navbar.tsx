@@ -31,10 +31,10 @@ export function Navbar() {
     }, [])
 
     return (
-        <NavigationMenu className="py-3 px-5 max-w-7xl flex mx-auto" viewport={false}>
-            <div className="flex justify-between w-full">
+        <NavigationMenu className="py-4 px-5 max-w-8xl flex mx-auto" viewport={false}>
+            <div className="flex justify-between w-full flex-wrap">
                 <NavigationMenuItem className="flex">
-                    <NavigationMenuLink href="/shouldirip">
+                    <NavigationMenuLink href="/shouldirip" className="p-0">
                         <H1>Should I Rip?</H1>
                     </NavigationMenuLink>
                 </NavigationMenuItem>

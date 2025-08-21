@@ -56,6 +56,24 @@ type Rarity = {
   probability_any: number;
 }
 
+function getVisitorId() {
+  let id = localStorage.getItem("visitor_id")
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem("visitor_id", id)
+  }
+  return id
+}
+
+async function registerVisitor() {
+  const visitorId = getVisitorId()
+  await supabase.from("visitors").upsert(
+    [{ visitor_id: visitorId }],
+    { onConflict: "visitor_id" }
+  )
+}
+
+
 function App() {
   const [sets, setSets] = useState<CardSet[]>([]);
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
@@ -71,6 +89,10 @@ function App() {
   const [pageSize] = useState(20)
   const [totalPages, setTotalPages] = useState(0)
 
+  //update visitor log 
+  useEffect(() => {
+    registerVisitor()
+  }, [])
 
   // Fetch sets on mount
   useEffect(() => {
@@ -264,7 +286,7 @@ function App() {
     <>
       {!selectedSetId ? (
         // Landing state when no set is selected
-        <div className="flex flex-col items-center justify-center text-center min-h-[70vh] px-4">
+        <div className="flex flex-col items-center justify-center text-center min-h-[80vh] px-4">
           <H1 color="black" className="mb-4">Save Your Money</H1>
           <p className="max-w-prose mb-6 text-lg text-gray-700">
             Stop paying outrageous market prices for Pokémon TCG packs! This app can help you decide whether it’s actually worth it to buy booster packs, over just buying singles.
