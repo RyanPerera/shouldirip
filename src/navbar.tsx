@@ -1,7 +1,7 @@
 "use client";
 import { CircleHelpIcon } from "lucide-react";
 
-import { NavigationMenu, NavigationMenuItem, NavigationMenuLink } from "@/components/ui/navigation-menu";
+import { NavigationMenu, NavigationMenuItem, NavigationMenuLink, NavigationMenuList } from "@/components/ui/navigation-menu";
 import { H1, Small } from "./components/ui/typography"
 import { Tooltip, TooltipContent, TooltipTrigger } from "./components/ui/tooltip";
 import { useEffect, useState } from "react";
@@ -31,9 +31,11 @@ export function Navbar() {
     }, [])
 
     return (
-        <NavigationMenu className="py-4 px-5 max-w-8xl flex mx-auto" viewport={false}>
-            <div className="flex justify-between w-full flex-wrap">
-                <NavigationMenuItem className="flex">
+        <NavigationMenu className="flex flex-grow  w-full px-5 py-4 top-0 absolute">
+
+            <NavigationMenuList className="flex w-full items-center justify-between gap-4">
+
+                <NavigationMenuItem>
                     <NavigationMenuLink href="/shouldirip" className="p-0">
                         <H1>Should I Rip?</H1>
                     </NavigationMenuLink>
@@ -59,7 +61,7 @@ export function Navbar() {
                         </TooltipContent>
                     </Tooltip>
                 </NavigationMenuItem>
-            </div>
+            </NavigationMenuList>
         </NavigationMenu>
     )
 }

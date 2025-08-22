@@ -7,8 +7,16 @@ import { Footer } from './footer.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Navbar />
-    <App />
-    <Footer />
+
+    <div className="flex flex-col min-h-screen max-w-full">
+
+      <Navbar />
+
+      <main className="flex-grow mt-20">
+
+        <App />
+      </main>
+      <Footer />
+    </div>
   </StrictMode>,
 )

@@ -286,7 +286,7 @@ function App() {
     <>
       {!selectedSetId ? (
         // Landing state when no set is selected
-        <div className="flex flex-col items-center justify-center text-center min-h-[80vh] px-4">
+        <div className="flex flex-col items-center justify-center text-center min-h-[80vh] px-4 w-full">
           <H1 color="black" className="mb-4">Save Your Money</H1>
           <p className="max-w-prose mb-6 text-lg text-gray-700">
             Stop paying outrageous market prices for Pokémon TCG packs! This app can help you decide whether it’s actually worth it to buy booster packs, over just buying singles.

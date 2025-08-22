@@ -5,7 +5,7 @@ import { Small } from './components/ui/typography';
 export function Footer() {
 
     return (
-        <div className="flex justify-end px-5 mx-auto max-w-8xl items-center gap-3 justify-self-end">
+        <div className=" bottom-0 flex w-full justify-end p-5 mx-auto max-w-8xl items-center gap-3 justify-self-end">
 
             <Small>Developed by Ryan Perera</Small>
             <a href='https://www.linkedin.com/in/ryan-perera/' target='_blank' rel="noreferrer">
