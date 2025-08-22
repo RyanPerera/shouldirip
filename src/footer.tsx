@@ -19,7 +19,7 @@ export function Footer() {
 
             <br />
 
-            <a href='https://ryanperera.github.io/ciphercollector/' target='_blank' rel="noreferrer">
+            <a href='https://github.com/RyanPerera' target='_blank' rel="noreferrer">
                 <HugeiconsIcon
                     icon={Github01FreeIcons}
                     size={24}
