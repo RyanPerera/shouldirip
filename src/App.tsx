@@ -24,15 +24,19 @@ const allowed_rarities = [
   'Common',
   'Uncommon',
   'Rare',
+  'Shiny Rare',
   'Poké Ball Foil',
   'Double Rare',
   'Ultra Rare',
+  'Shiny Ultra Rare',
   'Hyper Rare',
   'Illustration Rare',
   'Master Ball Foil',
   'ACE SPEC Rare',
   'Special Illustration Rare',
-  'Black White Rare'
+  'Black White Rare',
+  'Foil Energy',
+
 ]
 
 type CardSet = {
