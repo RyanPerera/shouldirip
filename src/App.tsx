@@ -30,6 +30,7 @@ const allowed_rarities = [
   'Ultra Rare',
   'Shiny Ultra Rare',
   'Hyper Rare',
+  'Mega Hyper Rare',
   'Illustration Rare',
   'Master Ball Foil',
   'ACE SPEC Rare',
