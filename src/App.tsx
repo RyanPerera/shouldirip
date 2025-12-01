@@ -19,6 +19,8 @@ import {
 } from './components/ui/pagination';
 import { XIcon } from 'lucide-react';
 import { Button } from './components/ui/button';
+import ChangelogTable from "./components/ChangelogTable";
+
 
 const allowed_rarities = [
   'Common',
@@ -313,6 +315,9 @@ function App() {
               </SelectContent>
             </Select>
           </Card>
+          <div className="mt-10 w-full max-w-2xl">
+            <ChangelogTable />
+          </div>
         </div>
       ) : (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 justify-center'>
