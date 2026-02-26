@@ -109,6 +109,7 @@ function App() {
       const { data: setsData, error } = await supabase
         .from('sets')
         .select('id, name, pack_price')
+        .order('release_date', { ascending: false })
 
       if (error) {
         console.error('Error fetching sets:', error.message);
