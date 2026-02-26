@@ -8,7 +8,8 @@ import { Checkbox } from './components/ui/checkbox';
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from './components/ui/table';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Slider } from './components/ui/slider';
-import { displayPercent } from './lib/format';
+import { convertFromUsd, convertToUsd, displayPercent, formatCurrencyFromUsd } from './lib/format';
+import type { Currency } from './lib/format';
 import {
   Pagination,
   PaginationContent,
@@ -82,8 +83,12 @@ async function registerVisitor() {
   )
 }
 
+type AppProps = {
+  currency: Currency;
+  usdToCadRate: number;
+}
 
-function App() {
+function App({ currency, usdToCadRate }: AppProps) {
   const [sets, setSets] = useState<CardSet[]>([]);
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
@@ -92,7 +97,7 @@ function App() {
 
 
   const [packs, setPacks] = useState(10);
-  const [packPrice, setPackPrice] = useState(4.99);
+  const [packPriceUsd, setPackPriceUsd] = useState(4.99);
 
   const [page, setPage] = useState(1)
   const [pageSize] = useState(20)
@@ -131,7 +136,7 @@ function App() {
 
     const selectedSet = sets.find(s => s.id === selectedSetId);
     if (selectedSet && selectedSet.pack_price) {
-      setPackPrice(selectedSet.pack_price);
+      setPackPriceUsd(selectedSet.pack_price);
     }
 
     async function getCards() {
@@ -226,10 +231,10 @@ function App() {
       return {
         ...card,
         probability: prob * 100,
-        costPacks: packs * packPrice,
+        costPacks: packs * packPriceUsd,
       };
     });
-  }, [packs, rarities, selectedCards, packPrice]);
+  }, [packs, rarities, selectedCards, packPriceUsd]);
 
 
   // totals for footer
@@ -260,6 +265,14 @@ function App() {
 
     return { probAll, probAny, totalMarket };
   }, [packs, selectedCards, rarities]);
+
+  const displayedPackPrice = useMemo(() => {
+    return convertFromUsd(packPriceUsd, currency, usdToCadRate);
+  }, [packPriceUsd, currency, usdToCadRate]);
+
+  const totalCostUsd = useMemo(() => {
+    return packs * packPriceUsd;
+  }, [packs, packPriceUsd]);
 
 
   // Helper to generate visible pages with ellipsis
@@ -411,7 +424,7 @@ function App() {
                       <CardFooter className='flex flex-col p-0 mb-auto flex-grow'>
                         <Large className="text-center text-xs">{card.name}</Large>
                         <Small className="text-center text-xs">{card.rarity}</Small>
-                        <Small className="text-center text-xs">${card.market_price}</Small>
+                        <Small className="text-center text-xs">{formatCurrencyFromUsd(Number(card.market_price), currency, usdToCadRate)}</Small>
                       </CardFooter>
                     </Card>
                   ))}
@@ -493,13 +506,17 @@ function App() {
 
               {/* Pack Price */}
               <div className="flex flex-col mt-4 sm:mt-0">
-                <label className="mb-1 font-medium">Price per pack ($):</label>
+                <label className="mb-1 font-medium">Price per pack ({currency}):</label>
                 <input
                   type="number"
                   min={0}
                   step={0.01}
-                  value={packPrice}
-                  onChange={(e) => setPackPrice(Number(e.target.value))}
+                  value={displayedPackPrice.toFixed(2)}
+                  onChange={(e) => {
+                    const inputValue = Number(e.target.value);
+                    if (Number.isNaN(inputValue)) return;
+                    setPackPriceUsd(convertToUsd(inputValue, currency, usdToCadRate));
+                  }}
                   className="w-32 p-1 border rounded"
                 />
               </div>
@@ -507,7 +524,7 @@ function App() {
 
             {/* Display total cost */}
             <p className="mt-2 font-semibold">
-              Total cost: ${(packs * packPrice).toFixed(2)}
+              Total cost: {formatCurrencyFromUsd(totalCostUsd, currency, usdToCadRate)}
             </p>
 
 
@@ -554,7 +571,7 @@ function App() {
                         <TableCell>{card.name}</TableCell>
                         <TableCell>{card.rarity}</TableCell>
                         <TableCell colSpan={2} className="text-right">{card.probability.toFixed(2)}%</TableCell>
-                        <TableCell className="text-right">${(card.market_price).toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{formatCurrencyFromUsd(Number(card.market_price), currency, usdToCadRate)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -565,7 +582,7 @@ function App() {
                       </TableCell>
                       <TableCell>
                         <strong>Total cost: </strong>
-                        <span>${(packs * packPrice).toFixed(2)}</span>
+                        <span>{formatCurrencyFromUsd(totalCostUsd, currency, usdToCadRate)}</span>
                       </TableCell>
                       {/* Probability column: show both "All" and "Any" */}
                       <TableCell colSpan={2} className="text-right">
@@ -583,7 +600,7 @@ function App() {
                       {/* total market value */}
                       <TableCell className="text-right">
                         <strong>Total market price: </strong>
-                        <span>${selectedTotals.totalMarket.toFixed(2)}</span>
+                        <span>{formatCurrencyFromUsd(selectedTotals.totalMarket, currency, usdToCadRate)}</span>
                       </TableCell>
                     </TableRow>
                   </TableFooter>
