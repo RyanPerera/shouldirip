@@ -7,8 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 
 - Mega Hyper Rare rarity with the release of ME: Mega Evolution
-
-
+- Mega Attack Rare rarity with the release of ME: Ascended Heroes
 
 ## [Unreleased]
 

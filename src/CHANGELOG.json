@@ -4,5 +4,9 @@
     "change": "Added ME: Mega Evolution and new Mega Hyper Rare rarity",
     "date": "09/30/2025"
   },
-  { "change": "Added ME: Phantasmal Flames", "date": "12/01/2025" }
+  { "change": "Added ME: Phantasmal Flames", "date": "12/01/2025" },
+  {
+    "change": "Added ME: Ascended Heroes and new Mega Attack Rare rarity",
+    "date": "25/02/2025"
+  }
 ]

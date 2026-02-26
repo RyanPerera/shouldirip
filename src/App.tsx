@@ -33,6 +33,7 @@ const allowed_rarities = [
   'Shiny Ultra Rare',
   'Hyper Rare',
   'Mega Hyper Rare',
+  'Mega Attack Rare',
   'Holo Rare',
   'Illustration Rare',
   'Master Ball Foil',
