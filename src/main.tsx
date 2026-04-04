@@ -33,7 +33,7 @@ function Root() {
   }, [])
 
   return (
-    <div className="flex flex-col min-h-screen min-w-screen">
+    <div className="flex min-h-screen w-full min-w-0 flex-col overflow-x-clip">
       <Navbar currency={currency} onCurrencyChange={setCurrency} />
       <main className="flex-grow mt-20">
         <App currency={currency} usdToCadRate={usdToCadRate} />

@@ -29,10 +29,11 @@ export const formatCurrencyFromUsd = (
   usdToCadRate: number,
 ) => {
   const convertedAmount = convertFromUsd(amountUsd, currency, usdToCadRate);
-  return new Intl.NumberFormat("en-CA", {
-    style: "currency",
-    currency,
+  const formatted = new Intl.NumberFormat("en-CA", {
+    style: "decimal",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(convertedAmount);
+  }).format(Math.abs(convertedAmount));
+
+  return convertedAmount < 0 ? `-$${formatted}` : `$${formatted}`;
 };
