@@ -76,6 +76,7 @@ export function Navbar({ currency, onCurrencyChange }: NavbarProps) {
                                 <SelectGroup>
                                     <SelectItem value="USD">🇺🇸 USD</SelectItem>
                                     <SelectItem value="CAD">🇨🇦 CAD</SelectItem>
+                                    <SelectItem value="JPY">🇯🇵 JPY</SelectItem>
                                 </SelectGroup>
                             </SelectContent>
                         </Select>

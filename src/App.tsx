@@ -42,7 +42,7 @@ const allowed_rarities = [
   'Special Illustration Rare',
   'Black White Rare',
   'Foil Energy',
-
+  'Reverse Holofoil'
 ]
 
 type CardSet = {
@@ -86,9 +86,10 @@ async function registerVisitor() {
 type AppProps = {
   currency: Currency;
   usdToCadRate: number;
+  usdToJpyRate: number;
 }
 
-function App({ currency, usdToCadRate }: AppProps) {
+function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
   const [sets, setSets] = useState<CardSet[]>([]);
   const [selectedSetId, setSelectedSetId] = useState<string | null>(null);
   const [cards, setCards] = useState<Card[]>([]);
@@ -267,8 +268,10 @@ function App({ currency, usdToCadRate }: AppProps) {
   }, [packs, selectedCards, rarities]);
 
   const displayedPackPrice = useMemo(() => {
-    return convertFromUsd(packPriceUsd, currency, usdToCadRate);
-  }, [packPriceUsd, currency, usdToCadRate]);
+    return convertFromUsd(packPriceUsd, currency, { usdToCadRate, usdToJpyRate });
+  }, [packPriceUsd, currency, usdToCadRate, usdToJpyRate]);
+
+  const currencyFractionDigits = currency === 'JPY' ? 0 : 2;
 
   const totalCostUsd = useMemo(() => {
     return packs * packPriceUsd;
@@ -424,7 +427,7 @@ function App({ currency, usdToCadRate }: AppProps) {
                       <CardFooter className='flex flex-col p-0 mb-auto flex-grow'>
                         <Large className="text-center text-xs">{card.name}</Large>
                         <Small className="text-center text-xs">{card.rarity}</Small>
-                        <Small className="text-center text-xs">{formatCurrencyFromUsd(Number(card.market_price), currency, usdToCadRate)}</Small>
+                        <Small className="text-center text-xs">{formatCurrencyFromUsd(Number(card.market_price), currency, { usdToCadRate, usdToJpyRate })}</Small>
                       </CardFooter>
                     </Card>
                   ))}
@@ -510,12 +513,12 @@ function App({ currency, usdToCadRate }: AppProps) {
                 <input
                   type="number"
                   min={0}
-                  step={0.01}
-                  value={displayedPackPrice.toFixed(2)}
+                  step={currency === 'JPY' ? 1 : 0.01}
+                  value={displayedPackPrice.toFixed(currencyFractionDigits)}
                   onChange={(e) => {
                     const inputValue = Number(e.target.value);
                     if (Number.isNaN(inputValue)) return;
-                    setPackPriceUsd(convertToUsd(inputValue, currency, usdToCadRate));
+                    setPackPriceUsd(convertToUsd(inputValue, currency, { usdToCadRate, usdToJpyRate }));
                   }}
                   className="w-32 p-1 border rounded"
                 />
@@ -524,7 +527,7 @@ function App({ currency, usdToCadRate }: AppProps) {
 
             {/* Display total cost */}
             <p className="mt-2 font-semibold">
-              Total cost: {formatCurrencyFromUsd(totalCostUsd, currency, usdToCadRate)}
+              Total cost: {formatCurrencyFromUsd(totalCostUsd, currency, { usdToCadRate, usdToJpyRate })}
             </p>
 
 
@@ -571,7 +574,7 @@ function App({ currency, usdToCadRate }: AppProps) {
                         <TableCell>{card.name}</TableCell>
                         <TableCell>{card.rarity}</TableCell>
                         <TableCell colSpan={2} className="text-right">{card.probability.toFixed(2)}%</TableCell>
-                        <TableCell className="text-right">{formatCurrencyFromUsd(Number(card.market_price), currency, usdToCadRate)}</TableCell>
+                        <TableCell className="text-right">{formatCurrencyFromUsd(Number(card.market_price), currency, { usdToCadRate, usdToJpyRate })}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -582,7 +585,7 @@ function App({ currency, usdToCadRate }: AppProps) {
                       </TableCell>
                       <TableCell>
                         <strong>Total cost: </strong>
-                        <span>{formatCurrencyFromUsd(totalCostUsd, currency, usdToCadRate)}</span>
+                        <span>{formatCurrencyFromUsd(totalCostUsd, currency, { usdToCadRate, usdToJpyRate })}</span>
                       </TableCell>
                       {/* Probability column: show both "All" and "Any" */}
                       <TableCell colSpan={2} className="text-right">
@@ -600,7 +603,7 @@ function App({ currency, usdToCadRate }: AppProps) {
                       {/* total market value */}
                       <TableCell className="text-right">
                         <strong>Total market price: </strong>
-                        <span>{formatCurrencyFromUsd(selectedTotals.totalMarket, currency, usdToCadRate)}</span>
+                        <span>{formatCurrencyFromUsd(selectedTotals.totalMarket, currency, { usdToCadRate, usdToJpyRate })}</span>
                       </TableCell>
                     </TableRow>
                   </TableFooter>
