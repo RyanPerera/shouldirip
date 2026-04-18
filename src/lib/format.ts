@@ -47,5 +47,7 @@ export const formatCurrencyFromUsd = (
     maximumFractionDigits: fractionDigits,
   }).format(Math.abs(convertedAmount));
 
-  return convertedAmount < 0 ? `-${symbol}${formatted}` : `${symbol}${formatted}`;
+  return convertedAmount < 0
+    ? `-${symbol}${formatted}`
+    : `${symbol}${formatted}`;
 };

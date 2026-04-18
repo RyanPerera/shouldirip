@@ -18,8 +18,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from './components/ui/pagination';
-import { XIcon } from 'lucide-react';
+import { ArrowDown, ArrowUp, XIcon } from 'lucide-react';
 import { Button } from './components/ui/button';
+import { HelpTip } from './components/ui/tooltip';
 import ChangelogTable from "./components/ChangelogTable";
 
 
@@ -59,6 +60,12 @@ type Card = {
   image_url: string;
 }
 
+type EvCard = {
+  id: string;
+  rarity: string;
+  market_price: number;
+}
+
 type Rarity = {
   id: string;
   rarity: string;
@@ -95,6 +102,7 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
   const [cards, setCards] = useState<Card[]>([]);
   const [rarities, setRarities] = useState<Rarity[]>([]);
   const [selectedCards, setSelectedCards] = useState<Map<string, Card>>(new Map());
+  const [evCards, setEvCards] = useState<EvCard[]>([]);
 
 
   const [packs, setPacks] = useState(10);
@@ -171,6 +179,29 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
     getCards();
   }, [selectedSetId, sets, page, pageSize]);
 
+
+  // Fetch all cards >= $1 for EV calculation whenever a set is selected
+  useEffect(() => {
+    if (!selectedSetId) return;
+    setEvCards([]);
+
+    async function getEvCards() {
+      const { data, error } = await supabase
+        .from('cards')
+        .select('id, rarity, market_price')
+        .in('rarity', allowed_rarities)
+        .eq('set_id', selectedSetId)
+        .gte('market_price', 1)
+
+      if (error) {
+        console.error('Error fetching EV cards:', error.message);
+      } else if (data) {
+        setEvCards(data);
+      }
+    }
+
+    getEvCards();
+  }, [selectedSetId]);
 
   // Fetch rarity distribution whenever a set is selected
   useEffect(() => {
@@ -277,6 +308,27 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
     return packs * packPriceUsd;
   }, [packs, packPriceUsd]);
 
+  // Expected value per pack and ROI stats
+  const evStats = useMemo(() => {
+    if (evCards.length === 0 || rarities.length === 0) {
+      return { evPerPack: 0, totalEv: 0, roi: 0, isPositiveRoi: false, cardCount: 0 };
+    }
+
+    let evPerPack = 0;
+    for (const card of evCards) {
+      const rarityRow = rarities.find(r => r.rarity === card.rarity);
+      if (!rarityRow) continue;
+      evPerPack += Number(rarityRow.probability) * Number(card.market_price);
+    }
+
+    const totalEv = evPerPack * packs;
+    const totalCost = packs * packPriceUsd;
+    const roi = totalCost > 0 ? (totalEv - totalCost) / totalCost : 0;
+    const isPositiveRoi = roi > 0;
+
+    return { evPerPack, totalEv, roi, isPositiveRoi, cardCount: evCards.length };
+  }, [evCards, rarities, packs, packPriceUsd]);
+
 
   // Helper to generate visible pages with ellipsis
   function getVisiblePages(page: number, totalPages: number, maxPages = 5) {
@@ -312,7 +364,7 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
     <>
       {!selectedSetId ? (
         // Landing state when no set is selected
-        <div className="flex flex-col items-center justify-center text-center min-h-[80vh] px-4 w-full">
+        (<div className="flex flex-col items-center justify-center text-center min-h-[80vh] px-4 w-full">
           <H1 color="black" className="mb-4">Save Your Money</H1>
           <p className="max-w-prose mb-6 text-lg text-gray-700">
             Stop paying outrageous market prices for Pokémon TCG packs! This app can help you decide whether it’s actually worth it to buy booster packs, over just buying singles.
@@ -336,7 +388,7 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
           <div className="mt-10 w-full max-w-2xl">
             <ChangelogTable />
           </div>
-        </div>
+        </div>)
       ) : (
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 p-2 justify-center'>
           <Card className='col-span-1 p-8 order-2'>
@@ -531,10 +583,61 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
             </p>
 
 
+            {/* EV / ROI Section */}
+            {evStats.cardCount > 0 && (
+              <>
+                <H2>
+                  Expected Value Analysis
+                  <HelpTip>
+                    <p><strong>EV per pack</strong><br /><code>Σ(P(card) × market price)</code><br />for all cards ≥ $1.</p>
+                    <p className="mt-2"><strong>Total EV</strong><br /><code>EV per pack × number of packs</code></p>
+                    <p className="mt-2"><strong>ROI</strong><br /><code>(Total EV − Total Cost) / Total Cost</code></p>
+                  </HelpTip>
+                </H2>
+                <Small className="text-muted-foreground">
+                  Based on {evStats.cardCount} cards in this set worth {formatCurrencyFromUsd(1, currency, { usdToCadRate, usdToJpyRate })} or more.
+                  This estimates the average market value you'd pull per pack based on pull rates.
+                </Small>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4">
+                  <div className="flex flex-col gap-1">
+                    <Small className="text-muted-foreground">EV per pack</Small>
+                    <Large>{formatCurrencyFromUsd(evStats.evPerPack, currency, { usdToCadRate, usdToJpyRate })}</Large>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Small className="text-muted-foreground">Total EV ({packs} packs)</Small>
+                    <Large>{formatCurrencyFromUsd(evStats.totalEv, currency, { usdToCadRate, usdToJpyRate })}</Large>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Small className="text-muted-foreground">Total cost ({packs} packs)</Small>
+                    <Large>{formatCurrencyFromUsd(totalCostUsd, currency, { usdToCadRate, usdToJpyRate })}</Large>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Small className="text-muted-foreground">ROI</Small>
+                    <Large className={`inline-flex items-center whitespace-nowrap ${evStats.isPositiveRoi ? 'text-green-600' : 'text-red-600'}`}>
+                      {evStats.roi >= 0 ? <ArrowUp className="size-5 shrink-0" /> : <ArrowDown className="size-5 shrink-0" />}{Math.abs(evStats.roi * 100).toFixed(1)}%
+                    </Large>
+                  </div>
+                </div>
+
+                <p className={`mt-4 font-semibold ${evStats.isPositiveRoi ? 'text-green-600' : 'text-red-600'}`}>
+                  {evStats.isPositiveRoi
+                    ? 'On average, you are likely to make back your money with these packs.'
+                    : 'On average, you are unlikely to make back your money with these packs. Consider buying singles instead.'}
+                </p>
+              </>
+            )}
+
             {/* Chart for rarities */}
             {rarityDistribution.length > 0 && (
               <>
-                <H2>Rarity Probability Distribution</H2>
+                <H2>
+                  Rarity Probability Distribution
+                  <HelpTip>
+                    <p>Shows the cumulative probability of pulling at least one card of each rarity across your packs.</p>
+                    <p className="mt-2"><strong>Formula</strong><br /><code>1 − (1 − p)ⁿ</code><br />where <code>p</code> = single-pack pull rate, <code>n</code> = number of packs.</p>
+                  </HelpTip>
+                </H2>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={rarityDistribution}>
                     <XAxis dataKey="rarity" />
@@ -555,10 +658,19 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
               </>
             )}
 
+
+
             {/* Table for selected cards */}
             {selectedCardStats.length > 0 && (
               <>
-                <H2>Selected Cards Odds</H2>
+                <H2>
+                  Selected Cards Odds
+                  <HelpTip>
+                    <p><strong>Pull rate per card</strong><br /><code>1 − (1 − p)ⁿ</code><br />where <code>p</code> = single-pack probability, <code>n</code> = number of packs.</p>
+                    <p className="mt-2"><strong>Pulling every card</strong><br />Multiplies individual pull rates together.</p>
+                    <p className="mt-2"><strong>Pulling any card</strong><br />Complement of missing all: <code>1 − Π(1 − pᵢ)</code></p>
+                  </HelpTip>
+                </H2>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -611,6 +723,7 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
                 </Table>
               </>
             )}
+
 
 
           </Card>}
