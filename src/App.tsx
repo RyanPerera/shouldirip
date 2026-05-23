@@ -268,8 +268,6 @@ function App({ currency, usdToCadRate, usdToJpyRate }: AppProps) {
     });
   }, [packs, rarities, selectedCards, packPriceUsd]);
 
-
-  // totals for footer
   // totals for footer
   const selectedTotals = useMemo(() => {
     const selectedArray = Array.from(selectedCards.values()); // full card objects
